@@ -14,7 +14,7 @@ const sass = require("sass");
 const _ = require("lodash");
 const matter = require("gray-matter");
 const marked = require("marked");
-const { files } = require("./init");
+const tmplfiles = require("./init");
 
 const cwd = process.cwd();
 
@@ -90,7 +90,7 @@ function build(argv) {
 
 function init() {
   try {
-    files.forEach((f) => {
+    tmplfiles.forEach((f) => {
       if (f.dir) {
         fs.mkdirSync(f);
       } else {

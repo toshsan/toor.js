@@ -1,4 +1,4 @@
-export const files = [
+module.exports = [
   { dir: "css" },
   { dir: "templates" },
   { dir: "templates/blog" },
