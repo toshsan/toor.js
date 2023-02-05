@@ -16,10 +16,11 @@ const matter = require("gray-matter");
 const marked = require("marked");
 
 let data = {};
-try {
-  data = require("./toor-data");
-} catch (err) {
-  /* do nothing */
+if (
+  fs.existsSync(process.cwd() + "/toor-data.js") ||
+  fs.existsSync(process.cwd() + "/toor-data.json")
+) {
+  data = require(process.cwd() + "/toor-data");
 }
 
 function formatDate(date, format) {
@@ -62,18 +63,21 @@ function renderMD(path) {
   const content = fs.readFileSync(path, "utf8");
   const parsed = matter(content);
   const html = marked.parse(parsed.content);
-  return njk.render("_layout.html", { __html: html, ...parsed.data });
+  return njk.render(parsed.data.template ?? "_layout.html", {
+    __html: html,
+    ...parsed.data,
+  });
 }
 
 function build(argv) {
   let filename = "";
-  const templates = glob.sync("**/[^_]*.{html,xml,txt,md}", {
+  const templates = glob.sync("*/[^_].{html,xml,txt,md}", {
     cwd: "./templates",
   });
   templates.forEach((tmpl) => {
     const html = tmpl.endsWith(".md")
       ? renderMD("./templates/" + tmpl.replace(".html", ".md"))
-      : njk.render(tmpl, data);
+      : njk.render(tmpl, { data });
     filename = argv.outDir + "/" + tmpl.replace(".md", ".html");
     writeFileSyncRecursive(filename, html, { encoding: "utf-8" });
     console.log("Writing:", filename);
@@ -194,7 +198,7 @@ require("yargs")
         }
 
         if (fs.statSync("templates/" + safepath, { throwIfNoEntry: false })) {
-          return res.render(safepath, data);
+          return res.render(safepath, { data });
         }
         if (
           (fs.statSync("templates/" + safepath.replace(".html", ".md")),
