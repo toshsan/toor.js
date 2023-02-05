@@ -82,24 +82,25 @@ function build(argv) {
 }
 
 function init() {
-  fs.writeFileSync(
-    "toor-data.js",
-    `module.exports = {
+  try {
+    fs.mkdirSync("css");
+    fs.mkdirSync("templates");
+    fs.mkdirSync("templates/blog");
+    fs.writeFileSync(
+      "toor-data.js",
+      `module.exports = {
     blogs: [{}],
   };`
-  );
-  fs.mkdirSync("css");
-  fs.mkdirSync("templates");
-  fs.mkdirSync("templates/blog");
-  fs.writeFileSync(
-    "css/style.scss",
-    `body{
+    );
+    fs.writeFileSync(
+      "css/style.scss",
+      `body{
   font-family:sans-serif;
 }`
-  );
-  fs.writeFileSync(
-    "templates/_layout.html",
-    `<!DOCTYPE html>
+    );
+    fs.writeFileSync(
+      "templates/_layout.html",
+      `<!DOCTYPE html>
   <html lang="en">
   <head>
       <meta charset="UTF-8">
@@ -112,21 +113,24 @@ function init() {
       {% block body %}{% endblock %}
   </body>
 </html>`
-  );
-  fs.writeFileSync(
-    "templates/index.html",
-    `{% extends "_layout.html" %}
+    );
+    fs.writeFileSync(
+      "templates/index.html",
+      `{% extends "_layout.html" %}
 <h1>This is index, edit me in templates/index.html</h1>`
-  );
-  fs.writeFileSync(
-    "templates/blog/hello.md",
-    `---
+    );
+    fs.writeFileSync(
+      "templates/blog/hello.md",
+      `---
 title: Hello
 slug: home
 ---
 # Hello World
     `
-  );
+    );
+  } catch {
+    console.error("Failed to initialize.. check if directrory is not empty");
+  }
 }
 
 require("yargs")
