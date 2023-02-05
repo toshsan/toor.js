@@ -14,13 +14,16 @@ const sass = require("sass");
 const _ = require("lodash");
 const matter = require("gray-matter");
 const marked = require("marked");
+const { files } = require("./init");
+
+const cwd = process.cwd();
 
 let data = {};
 if (
-  fs.existsSync(process.cwd() + "/toor-data.js") ||
-  fs.existsSync(process.cwd() + "/toor-data.json")
+  fs.existsSync(`${cwd}/toor-data.js`) ||
+  fs.existsSync(`${cwd}/toor-data.json`)
 ) {
-  data = require(process.cwd() + "/toor-data");
+  data = require(`${cwd}/toor-data`);
 }
 
 function formatDate(date, format) {
@@ -87,57 +90,13 @@ function build(argv) {
 
 function init() {
   try {
-    fs.mkdirSync("css");
-    fs.mkdirSync("templates");
-    fs.mkdirSync("templates/blog");
-    fs.writeFileSync(
-      "toor-data.js",
-      `module.exports = {
-    blogs: [{}],
-  };`
-    );
-    fs.writeFileSync(
-      "css/style.scss",
-      `body{
-  font-family:sans-serif;
-}`
-    );
-    fs.writeFileSync(
-      "templates/_layout.html",
-      `<!DOCTYPE html>
-  <html lang="en">
-  <head>
-      <meta charset="UTF-8">
-      <meta http-equiv="X-UA-Compatible" content="IE=edge">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>{{ title }}</title>
-      <link rel='stylesheet' href='/css/style.css'/>
-  </head>
-  <body>
-      {% block body %}{{ __html | safe }}{% endblock %}
-  </body>
-</html>`
-    );
-    fs.writeFileSync(
-      "templates/index.html",
-      `{% extends "_layout.html" %}
-{% set title = 'Welcome' %}
-{% block body %}
-  <h1>This is index, edit me in templates/index.html</h1>
-  <a href="/blog/hello.html">Blog / hello</a>
-{% endblock %}
-      `
-    );
-    fs.writeFileSync(
-      "templates/blog/hello.md",
-      `---
-title: Hello
----
-# Hello World
-this page in from templates/blog/hello.md 
-
-[home](/)`
-    );
+    files.forEach((f) => {
+      if (f.dir) {
+        fs.mkdirSync(f);
+      } else {
+        fs.writeFileSync(f.file, f.content);
+      }
+    });
   } catch {
     console.error("Failed to initialize.. check if directrory is not empty");
     process.exit();
