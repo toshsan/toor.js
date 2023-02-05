@@ -1,0 +1,47 @@
+{
+  "name": "toor",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "node ./toor.js serve",
+    "build": "node ./toor.js",
+    "sass": "sass -s compressed css:public/css"
+  },
+  "bin": {
+    "myapp": "./index.js"
+  },
+  "dependencies": {
+    "dayjs": "latest",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "glob": "^8.1.0",
+    "gray-matter": "^4.0.3",
+    "lodash": "^4.17.21",
+    "marked": "^4.2.12",
+    "morgan": "^1.10.0",
+    "nunjucks": "^3.2.3",
+    "sass": "^1.57.1",
+    "yargs": "^17.6.2"
+  },
+  "devDependencies": {},
+  "description": "Toor static site builder",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/toshsan/toor.js.git"
+  },
+  "keywords": [
+    "toor",
+    "static",
+    "site",
+    "generator",
+    "website",
+    "jinja",
+    "nunjucks"
+  ],
+  "author": "Santosh Sahoo",
+  "bugs": {
+    "url": "https://github.com/toshsan/toor.js/issues"
+  },
+  "homepage": "https://github.com/toshsan/toor.js#readme"
+}
