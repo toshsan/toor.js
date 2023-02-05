@@ -74,7 +74,7 @@ function renderMD(path) {
 
 function build(argv) {
   let filename = "";
-  const templates = glob.sync("*/[^_].{html,xml,txt,md}", {
+  const templates = glob.sync("**/[^_]*.{html,xml,txt,md}", {
     cwd: "./templates",
   });
   templates.forEach((tmpl) => {
