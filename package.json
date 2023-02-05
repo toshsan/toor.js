@@ -1,6 +1,6 @@
 {
   "name": "toor",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "index.js",
   "license": "MIT",
   "scripts": {
@@ -9,7 +9,7 @@
     "sass": "sass -s compressed css:public/css"
   },
   "bin": {
-    "myapp": "./index.js"
+    "toor": "./index.js"
   },
   "dependencies": {
     "dayjs": "latest",
