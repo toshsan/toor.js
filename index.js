@@ -106,30 +106,37 @@ function init() {
       <meta charset="UTF-8">
       <meta http-equiv="X-UA-Compatible" content="IE=edge">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Document</title>
+      <title>{{ title }}</title>
       <link rel='stylesheet' href='/css/style.css'/>
   </head>
   <body>
-      {% block body %}{% endblock %}
+      {% block body %}{{ __html | safe }}{% endblock %}
   </body>
 </html>`
     );
     fs.writeFileSync(
       "templates/index.html",
       `{% extends "_layout.html" %}
-<h1>This is index, edit me in templates/index.html</h1>`
+{% set title = 'Welcome' %}
+{% block body %}
+  <h1>This is index, edit me in templates/index.html</h1>
+  <a href="/blog/hello.html">Blog / hello</a>
+{% endblock %}
+      `
     );
     fs.writeFileSync(
       "templates/blog/hello.md",
       `---
 title: Hello
-slug: home
 ---
 # Hello World
-    `
+this page in from templates/blog/hello.md 
+
+[home](/)`
     );
   } catch {
     console.error("Failed to initialize.. check if directrory is not empty");
+    process.exit();
   }
 }
 
