@@ -140,12 +140,15 @@ require("yargs")
       app.use(morgan("short"));
 
       app.use("/*.css", (req, res) => {
+	const postcss = require('postcss');
         const cssPath = req.params[0];
         const scssPath = cssPath + ".scss";
         console.log("Serving scss %s at %s", cssPath, scssPath);
-
-        const result = sass.compile(scssPath);
-        res.type("text/css").send(result.css);
+        const css = fs.readFileSync(scssPath);
+        const {plugins} = require(`${cwd}/postcss.config.js`);
+        postcss(plugins).process(css).then(result => {
+          res.type("text/css").send(result.css);
+        });
       });
 
       app.use((req, res, next) => {
