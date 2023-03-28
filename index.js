@@ -10,10 +10,11 @@ const dayjs = require("dayjs");
 const http = require("http");
 const express = require("express");
 const morgan = require("morgan");
-const sass = require("sass");
 const _ = require("lodash");
 const matter = require("gray-matter");
 const marked = require("marked");
+const postcssSass = require("postcss-sass");
+
 const tmplfiles = require("./init");
 
 const cwd = process.cwd();
@@ -118,7 +119,7 @@ require("yargs")
     },
     build
   )
-  .command("init", "Intialize the template directory", (yargs) => {}, init)
+  .command("init", "Intialize the template directory", () => {}, init)
   .command(
     "serve [port]",
     "Serves the dev site!",
@@ -140,18 +141,20 @@ require("yargs")
       app.use(morgan("short"));
 
       app.use("/*.css", (req, res) => {
-	const postcss = require('postcss');
+        const postcss = require("postcss");
         const cssPath = req.params[0];
         const scssPath = cssPath + ".scss";
         console.log("Serving scss %s at %s", cssPath, scssPath);
         const css = fs.readFileSync(scssPath);
-        const {plugins} = require(`${cwd}/postcss.config.js`);
-        postcss(plugins).process(css).then(result => {
-          res.type("text/css").send(result.css);
-        });
+        const { plugins } = require(`${cwd}/postcss.config.js`);
+        postcss(plugins, { syntax: postcssSass })
+          .process(css)
+          .then((result) => {
+            res.type("text/css").send(result.css);
+          });
       });
 
-      app.use((req, res, next) => {
+      app.use((req, res) => {
         const base = req.path.substring(1) || "index.html";
         let safepath = base;
         if (/.*\/$/i.test(base)) {
