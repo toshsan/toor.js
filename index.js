@@ -13,7 +13,7 @@ const morgan = require("morgan");
 const _ = require("lodash");
 const matter = require("gray-matter");
 const marked = require("marked");
-const postcssSass = require("postcss-sass");
+const sass = require("sass");
 
 const tmplfiles = require("./init");
 
@@ -141,17 +141,13 @@ require("yargs")
       app.use(morgan("short"));
 
       app.use("/*.css", (req, res) => {
-        const postcss = require("postcss");
         const cssPath = req.params[0];
         const scssPath = cssPath + ".scss";
         console.log("Serving scss %s at %s", cssPath, scssPath);
-        const css = fs.readFileSync(scssPath);
-        const { plugins } = require(`${cwd}/postcss.config.js`);
-        postcss(plugins, { syntax: postcssSass })
-          .process(css)
-          .then((result) => {
-            res.type("text/css").send(result.css);
-          });
+        const css = sass.compile(scssPath, {
+          sourceMap: "inline",
+        });
+        res.type("text/css").send(css.css);
       });
 
       app.use((req, res) => {
@@ -165,10 +161,11 @@ require("yargs")
         if (fs.statSync("templates/" + safepath, { throwIfNoEntry: false })) {
           return res.render(safepath, { data });
         }
-        if (
-          (fs.statSync("templates/" + safepath.replace(".html", ".md")),
-          { throwIfNoEntry: false })
-        ) {
+        const exists = fs.statSync(
+          "templates/" + safepath.replace(".html", ".md"),
+          { throwIfNoEntry: false }
+        );
+        if (exists) {
           const html = renderMD(
             "templates/" + safepath.replace(".html", ".md")
           );
