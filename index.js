@@ -17,6 +17,7 @@ const sass = require("sass");
 const { resolve } = require("path");
 const tmplfiles = require("./init");
 
+const IS_DEV = process.env.NODE_ENV === "development";
 const cwd = resolve(process.env.BASE || ".");
 console.log(cwd);
 
@@ -42,6 +43,21 @@ njk.addGlobal("UGC_CDN", process.env.UGC_CDN || "");
 njk.addGlobal("TODAY", new Date());
 njk.addFilter("date", formatDate);
 njk.addFilter("take", _.take);
+njk.addFilter("vite", function viteInject(script) {
+  const MANIFEST = require(process.env.MANIFEST || `${cwd}/manifest.json`);
+  if (IS_DEV)
+    return `<script async type="module" src="${process.env.STATIC_URL}/${script}"></script>`;
+  const mf = MANIFEST[script];
+  if (!mf) return "";
+  return `${_.map(
+    mf.css,
+    (css) =>
+      `<link rel="stylesheet" crossorigin="anonymous" href="${process.env.STATIC_URL}/${css}"/>`
+  ).join(
+    ""
+  )}<script async type="module" crossorigin="anonymous" src="${process.env.STATIC_URL}/${mf.file
+    }"></script>`;
+})
 
 Object.keys(process.env).forEach((k) => {
   if (k.startsWith("GLOBAL_")) {
