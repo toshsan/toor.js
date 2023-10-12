@@ -14,10 +14,11 @@ const _ = require("lodash");
 const matter = require("gray-matter");
 const marked = require("marked");
 const sass = require("sass");
-
+const { resolve } = require("path");
 const tmplfiles = require("./init");
 
-const cwd = process.cwd();
+const cwd = resolve(process.env.BASE || ".");
+console.log(cwd);
 
 let data = {};
 if (
@@ -31,7 +32,7 @@ function formatDate(date, format) {
   return dayjs(date).format(format || "MMM DD YYYY");
 }
 
-const njk = nunjucks.configure("templates", {
+const njk = nunjucks.configure(`${cwd}/templates`, {
   autoescape: true,
   watch: true,
 });
@@ -76,11 +77,11 @@ function renderMD(path) {
 function build(argv) {
   let filename = "";
   const templates = glob.sync("**/[^_]*.{html,xml,txt,md}", {
-    cwd: "./templates",
+    cwd: `${cwd}/templates`,
   });
   templates.forEach((tmpl) => {
     const html = tmpl.endsWith(".md")
-      ? renderMD("./templates/" + tmpl.replace(".html", ".md"))
+      ? renderMD(`${cwd}/templates/` + tmpl.replace(".html", ".md"))
       : njk.render(tmpl, { data });
     filename = argv.outDir + "/" + tmpl.replace(".md", ".html");
     writeFileSyncRecursive(filename, html, { encoding: "utf-8" });
@@ -119,7 +120,7 @@ require("yargs")
     },
     build
   )
-  .command("init", "Intialize the template directory", () => {}, init)
+  .command("init", "Intialize the template directory", () => { }, init)
   .command(
     "serve [port]",
     "Serves the dev site!",
@@ -137,12 +138,12 @@ require("yargs")
       app.engine("html", njk.render);
       app.set("view engine", "html");
 
-      app.use(express.static("public"));
+      app.use(express.static(cwd + "/public"));
       app.use(morgan("short"));
 
       app.use("/*.css", (req, res) => {
         const cssPath = req.params[0];
-        const scssPath = cssPath + ".scss";
+        const scssPath = `${cwd}/${cssPath}.scss`;
         console.log("Serving scss %s at %s", cssPath, scssPath);
         const css = sass.compile(scssPath, {
           sourceMap: "inline",
@@ -155,19 +156,21 @@ require("yargs")
         let safepath = base;
         if (/.*\/$/i.test(base)) {
           console.log("Serving index %s", req.path);
-          safepath = base + "index.html";
+          safepath = `index.html`;
         }
 
-        if (fs.statSync("templates/" + safepath, { throwIfNoEntry: false })) {
+        if (fs.statSync(`${cwd}/templates/${safepath}`, {
+          throwIfNoEntry: false
+        })) {
           return res.render(safepath, { data });
         }
         const exists = fs.statSync(
-          "templates/" + safepath.replace(".html", ".md"),
+          `${cwd}/templates/${safepath.replace(".html", ".md")}`,
           { throwIfNoEntry: false }
         );
         if (exists) {
           const html = renderMD(
-            "templates/" + safepath.replace(".html", ".md")
+            `${cwd}/templates/${safepath.replace(".html", ".md")}`
           );
           return res.send(html);
         }
