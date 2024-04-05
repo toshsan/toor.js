@@ -1,7 +1,8 @@
 {
   "name": "toor",
-  "version": "1.0.10",
+  "version": "1.1.0",
   "main": "index.js",
+  "type": "module",
   "license": "MIT",
   "scripts": {
     "start": "node ./toor.js serve",
@@ -13,21 +14,21 @@
   },
   "dependencies": {
     "dayjs": "latest",
-    "dotenv": "^16.0.3",
-    "express": "^4.18.2",
-    "glob": "^8.1.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "glob": "^10.3.12",
     "gray-matter": "^4.0.3",
     "lodash": "^4.17.21",
-    "marked": "^4.2.12",
+    "marked": "^12.0.1",
     "morgan": "^1.10.0",
-    "nunjucks": "^3.2.3",
-    "yargs": "^17.6.2"
+    "nunjucks": "^3.2.4",
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
-    "cssnano": "^6.0.0",
-    "postcss": "^8.4.21",
+    "cssnano": "^6.1.2",
+    "postcss": "^8.4.38",
     "postcss-sass": "^0.5.0",
-    "sass": "^1.60.0"
+    "sass": "^1.74.1"
   },
   "description": "Toor static site builder",
   "repository": {
