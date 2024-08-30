@@ -1,6 +1,6 @@
 {
   "name": "toor",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "main": "index.js",
   "license": "MIT",
   "scripts": {
@@ -20,6 +20,7 @@
     "marked": "^14.1.0",
     "morgan": "^1.10.0",
     "nunjucks": "^3.2.4",
+    "vite": "^5.4.2",
     "yargs": "^17.7.2"
   },
   "devDependencies": {

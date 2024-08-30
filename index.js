@@ -153,7 +153,7 @@ function main() {
           describe: "the port to run webserver on",
         });
       },
-      function (argv) {
+      async function (argv) {
         const app = express();
         njk.express(app);
 
@@ -163,7 +163,14 @@ function main() {
         app.use(express.static("public"));
         app.use(morgan("short"));
 
+        const { createServer: createViteServer } = await import("vite");
+        const vite = await createViteServer({
+          server: { middlewareMode: true },
+          appType: "custom",
+        });
+
         app.use(useToorMiddleware);
+        app.use(vite.middlewares);
 
         http
           .createServer(app)
