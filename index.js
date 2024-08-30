@@ -13,21 +13,21 @@ const nunjucks = require("nunjucks");
 const { resolve } = require("path");
 
 const IS_DEV = process.env.NODE_ENV === "development";
-const cwd = resolve(process.env.TOOR_BASE || "templates/");
+const baseDir = resolve(process.env.TOOR_BASE || "templates/");
 
 let data = {};
 if (
-  fs.existsSync(`${cwd}/.toor/data.js`) ||
-  fs.existsSync(`${cwd}/.toor/data.json`)
+  fs.existsSync(`${baseDir}/.toor/data.js`) ||
+  fs.existsSync(`${baseDir}/.toor/data.json`)
 ) {
-  data = require(`${cwd}/.toor/data`);
+  data = require(`${baseDir}/.toor/data`);
 }
 
 function formatDate(date, format) {
   return dayjs(date).format(format || "MMM DD YYYY");
 }
 
-const njk = nunjucks.configure(cwd, {
+const njk = nunjucks.configure(baseDir, {
   autoescape: true,
   watch: true,
 });
@@ -42,7 +42,7 @@ njk.addFilter("vite", function viteInject(script) {
     return `<script async type="module" src="${process.env.STATIC_URL}/${script}"></script>`;
   }
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const MANIFEST = require(process.env.MANIFEST || `${cwd}/manifest.json`);
+  const MANIFEST = require(process.env.MANIFEST || `${baseDir}/manifest.json`);
   const mf = MANIFEST[script];
   if (!mf) return "";
   return `${_.map(
@@ -79,7 +79,7 @@ function renderMD(path) {
   const content = fs.readFileSync(path, "utf8");
   const parsed = matter(content);
   const html = marked.parse(parsed.content);
-  return njk.render(parsed.data.template ?? "_layout.html", {
+  return njk.render(parsed.data.template ?? "_theme/layout.html", {
     __html: html,
     ...parsed.data,
   });
@@ -90,11 +90,11 @@ function build(argv) {
   const templates = glob.sync("**/[^_]*.{html,xml,txt,md}", {
     dot: false,
     ignore: ["public/*", ".toor/*", "node_modules/*"],
-    cwd,
+    cwd: baseDir,
   });
   templates.forEach((tmpl) => {
     const html = tmpl.endsWith(".md")
-      ? renderMD(`${cwd}/` + tmpl.replace(".html", ".md"))
+      ? renderMD(`${baseDir}/` + tmpl.replace(".html", ".md"))
       : njk.render(tmpl, { data });
     filename = argv.outDir + "/" + tmpl.replace(".md", ".html");
     writeFileSyncRecursive(filename, html, { encoding: "utf-8" });
@@ -111,14 +111,14 @@ function useToorMiddleware(req, res, next) {
     safepath += "index";
   }
 
-  if (fs.statSync(`${cwd}/${safepath}`, { throwIfNoEntry: false })) {
+  if (fs.statSync(`${baseDir}/${safepath}`, { throwIfNoEntry: false })) {
     return res.send(njk.render(safepath, { data }));
   }
-  if (fs.statSync(`${cwd}/${safepath}.html`, { throwIfNoEntry: false })) {
+  if (fs.statSync(`${baseDir}/${safepath}.html`, { throwIfNoEntry: false })) {
     return res.send(njk.render(safepath + ".html", { data }));
   }
-  if (fs.statSync(`${cwd}/${safepath}.md`, { throwIfNoEntry: false })) {
-    const html = renderMD(`${cwd}/${safepath}.md`);
+  if (fs.statSync(`${baseDir}/${safepath}.md`, { throwIfNoEntry: false })) {
+    const html = renderMD(`${baseDir}/${safepath}.md`);
     return res.send(html);
   }
   return next();
@@ -129,7 +129,6 @@ module.exports.useToorMiddleware = useToorMiddleware;
 function main() {
   const yargs = require("yargs/yargs");
   const { hideBin } = require("yargs/helpers");
-
   yargs(hideBin(process.argv))
     .usage("$0 <cmd> [args]")
     .command(

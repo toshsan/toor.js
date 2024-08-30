@@ -1,6 +1,7 @@
 module.exports = [
   { dir: "css" },
   { dir: "templates" },
+  { dir: "templates/theme" },
   { dir: "templates/blog" },
   {
     file: "toor-data.js",
@@ -15,7 +16,7 @@ module.exports = [
 }`,
   },
   {
-    file: "templates/_layout.html",
+    file: "templates/_theme/layout.html",
     content: `<!DOCTYPE html>
   <html lang="en">
   <head>
