@@ -1,39 +1,35 @@
 #!/usr/bin/env node
 
-"use strict";
-require("dotenv").config({ path: process.env.DOTENV_CONFIG_PATH });
+import dayjs from "dayjs";
+import express from "express";
+import fs from "fs";
+import * as glob from "glob";
+import matter from "gray-matter";
+import http from "http";
+import _ from "lodash";
+import { marked } from "marked";
+import morgan from "morgan";
+import nunjucks from "nunjucks";
+import { resolve } from "path";
 
-const fs = require("fs");
-const glob = require("glob");
-const nunjucks = require("nunjucks");
-const dayjs = require("dayjs");
-const http = require("http");
-const express = require("express");
-const morgan = require("morgan");
-const _ = require("lodash");
-const matter = require("gray-matter");
-const marked = require("marked");
-const sass = require("sass");
-
-const tmplfiles = require("./init");
-
-const cwd = process.cwd();
+const IS_DEV = process.env.NODE_ENV === "development";
+const cwd = resolve(process.env.TOOR_BASE || ".");
 
 let data = {};
 if (
-  fs.existsSync(`${cwd}/toor-data.js`) ||
-  fs.existsSync(`${cwd}/toor-data.json`)
+    fs.existsSync(`${cwd}/.toor/data.js`) ||
+    fs.existsSync(`${cwd}/.toor/data.json`)
 ) {
-  data = require(`${cwd}/toor-data`);
+    data = require(`${cwd}/.toor/data`);
 }
 
 function formatDate(date, format) {
-  return dayjs(date).format(format || "MMM DD YYYY");
+    return dayjs(date).format(format || "MMM DD YYYY");
 }
 
-const njk = nunjucks.configure("templates", {
-  autoescape: true,
-  watch: true,
+const njk = nunjucks.configure(cwd, {
+    autoescape: true,
+    watch: true,
 });
 
 njk.addGlobal("STATIC_URL", process.env.STATIC_URL || "");
@@ -41,145 +37,137 @@ njk.addGlobal("UGC_CDN", process.env.UGC_CDN || "");
 njk.addGlobal("TODAY", new Date());
 njk.addFilter("date", formatDate);
 njk.addFilter("take", _.take);
+njk.addFilter("vite", function viteInject(script) {
+    if (IS_DEV) {
+        return `<script async type="module" src="${process.env.STATIC_URL}/${script}"></script>`;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const MANIFEST = require(process.env.MANIFEST || `${cwd}/manifest.json`);
+    const mf = MANIFEST[script];
+    if (!mf) return "";
+    return `${_.map(
+        mf.css,
+        (css) =>
+            `<link rel="stylesheet" crossorigin="anonymous" href="${process.env.STATIC_URL}/${css}"/>`
+    ).join("")}<script async type="module" crossorigin="anonymous" src="${process.env.STATIC_URL
+        }/${mf.file}"></script>`;
+});
 
 Object.keys(process.env).forEach((k) => {
-  if (k.startsWith("GLOBAL_")) {
-    console.log(k.replace("GLOBAL_", ""), process.env[k]);
-    njk.addGlobal(k.replace("GLOBAL_", ""), process.env[k]);
-  }
+    if (k.startsWith("GLOBAL_")) {
+        console.log(k.replace("GLOBAL_", ""), process.env[k]);
+        njk.addGlobal(k.replace("GLOBAL_", ""), process.env[k]);
+    }
 });
 
 // create folder path if not exists
 function writeFileSyncRecursive(filename, content, charset) {
-  filename
-    .split("/")
-    .slice(0, -1)
-    .reduce((last, folder) => {
-      let folderPath = last ? last + "/" + folder : folder;
-      if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath);
-      return folderPath;
-    });
+    filename
+        .split("/")
+        .slice(0, -1)
+        .reduce((last, folder) => {
+            const folderPath = last ? last + "/" + folder : folder;
+            if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath);
+            return folderPath;
+        });
 
-  fs.writeFileSync(filename, content, charset);
+    fs.writeFileSync(filename, content, charset);
 }
 
 function renderMD(path) {
-  const content = fs.readFileSync(path, "utf8");
-  const parsed = matter(content);
-  const html = marked.parse(parsed.content);
-  return njk.render(parsed.data.template ?? "_layout.html", {
-    __html: html,
-    ...parsed.data,
-  });
+    const content = fs.readFileSync(path, "utf8");
+    const parsed = matter(content);
+    const html = marked.parse(parsed.content);
+    return njk.render(parsed.data.template ?? "_layout.html", {
+        __html: html,
+        ...parsed.data,
+    });
 }
 
 function build(argv) {
-  let filename = "";
-  const templates = glob.sync("**/[^_]*.{html,xml,txt,md}", {
-    cwd: "./templates",
-  });
-  templates.forEach((tmpl) => {
-    const html = tmpl.endsWith(".md")
-      ? renderMD("./templates/" + tmpl.replace(".html", ".md"))
-      : njk.render(tmpl, { data });
-    filename = argv.outDir + "/" + tmpl.replace(".md", ".html");
-    writeFileSyncRecursive(filename, html, { encoding: "utf-8" });
-    console.log("Writing:", filename);
-  });
-  process.exit();
-}
-
-function init() {
-  try {
-    tmplfiles.forEach((f) => {
-      if (f.dir) {
-        fs.mkdirSync(f);
-      } else {
-        fs.writeFileSync(f.file, f.content);
-      }
+    let filename = "";
+    const templates = glob.sync("**/[^_]*.{html,xml,txt,md}", {
+        dot: false,
+        ignore: ["public/*", ".toor/*"],
+        cwd,
     });
-  } catch {
-    console.error("Failed to initialize.. check if directrory is not empty");
+    templates.forEach((tmpl) => {
+        const html = tmpl.endsWith(".md")
+            ? renderMD(`${cwd}/` + tmpl.replace(".html", ".md"))
+            : njk.render(tmpl, { data });
+        filename = argv.outDir + "/" + tmpl.replace(".md", ".html");
+        writeFileSyncRecursive(filename, html, { encoding: "utf-8" });
+        console.log("Writing:", filename);
+    });
     process.exit();
-  }
 }
 
-require("yargs")
-  .scriptName("toor.js")
-  .usage("$0 <cmd> [args]")
-  .command(
-    "$0",
-    "Build the project",
-    (yargs) => {
-      yargs.positional("outDir", {
-        type: "string",
-        default: "./dist",
-        describe: "Output directory",
-      });
-    },
-    build
-  )
-  .command("init", "Intialize the template directory", () => {}, init)
-  .command(
-    "serve [port]",
-    "Serves the dev site!",
-    (yargs) => {
-      yargs.positional("port", {
-        type: "integer",
-        default: "5050",
-        describe: "the port to run webserver on",
-      });
-    },
-    function (argv) {
-      const app = express();
-      njk.express(app);
-
-      app.engine("html", njk.render);
-      app.set("view engine", "html");
-
-      app.use(express.static("public"));
-      app.use(morgan("short"));
-
-      app.use("/*.css", (req, res) => {
-        const cssPath = req.params[0];
-        const scssPath = cssPath + ".scss";
-        console.log("Serving scss %s at %s", cssPath, scssPath);
-        const css = sass.compile(scssPath, {
-          sourceMap: "inline",
-        });
-        res.type("text/css").send(css.css);
-      });
-
-      app.use((req, res) => {
-        const base = req.path.substring(1) || "index.html";
-        let safepath = base;
-        if (/.*\/$/i.test(base)) {
-          console.log("Serving index %s", req.path);
-          safepath = base + "index.html";
-        }
-
-        if (fs.statSync("templates/" + safepath, { throwIfNoEntry: false })) {
-          return res.render(safepath, { data });
-        }
-        const exists = fs.statSync(
-          "templates/" + safepath.replace(".html", ".md"),
-          { throwIfNoEntry: false }
-        );
-        if (exists) {
-          const html = renderMD(
-            "templates/" + safepath.replace(".html", ".md")
-          );
-          return res.send(html);
-        }
-        return res.sendStatus(404);
-      });
-
-      http
-        .createServer(app)
-        .on("listening", () => {
-          console.log("Running on http://127.0.0.1:%s", argv.port);
-        })
-        .listen(argv.port);
+export function useToorMiddleware(req, res, next) {
+    const base = req.path.substring(1) || "index.html";
+    let safepath = base;
+    if (/.*\/$/i.test(base)) {
+        console.log("Serving index %s", req.path);
+        safepath += "index.html";
     }
-  )
-  .help().argv;
+
+    if (fs.statSync(`${cwd}/${safepath}`, { throwIfNoEntry: false })) {
+        return res.send(njk.render(safepath, { data }));
+    }
+    if (fs.statSync(`${cwd}/${safepath}.html`, { throwIfNoEntry: false })) {
+        return res.send(njk.render(safepath + ".html", { data }));
+    }
+    if (fs.statSync(`${cwd}/${safepath}.md`, { throwIfNoEntry: false })) {
+        const html = renderMD(`${cwd}/${safepath}.md`);
+        return res.send(html);
+    }
+    return next();
+}
+
+
+import("yargs").then(({ default: yargs }) => {
+    yargs.scriptName("toor.js")
+        .usage("$0 <cmd> [args]")
+        .command(
+            "build [outdir]",
+            "Build the project",
+            (yargs) => {
+                yargs.positional("outDir", {
+                    type: "string",
+                    default: "./dist",
+                    describe: "Output directory",
+                });
+            },
+            build
+        )
+        .command(
+            "serve [port]",
+            "Serves the dev site!",
+            (yargs) => {
+                yargs.positional("port", {
+                    type: "integer",
+                    default: "5050",
+                    describe: "the port to run webserver on",
+                });
+            },
+            function (argv) {
+                const app = express();
+                njk.express(app);
+
+                app.engine("html", njk.render);
+                app.set("view engine", "html");
+
+                app.use(express.static(cwd + "/public"));
+                app.use(morgan("short"));
+
+                app.use(useToorMiddleware);
+
+                http
+                    .createServer(app)
+                    .on("listening", () => {
+                        console.log("Running on http://127.0.0.1:%s", argv.port);
+                    })
+                    .listen(argv.port);
+            }
+        )
+        .help().argv;
+})
