@@ -13,21 +13,18 @@ const nunjucks = require("nunjucks");
 const { resolve } = require("path");
 
 const IS_DEV = process.env.NODE_ENV === "development";
-const baseDir = resolve(process.env.TOOR_BASE || "templates/");
+const tmplDir = resolve(process.env.TOOR_BASE || "templates/");
 
 let data = {};
-if (
-  fs.existsSync(`${baseDir}/.toor/data.js`) ||
-  fs.existsSync(`${baseDir}/.toor/data.json`)
-) {
-  data = require(`${baseDir}/.toor/data`);
+if (fs.existsSync(`.toor/data.js`) || fs.existsSync(`.toor/data.json`)) {
+  data = JSON.parse(fs.readFileSync(`.toor/data`, "ro"));
 }
 
 function formatDate(date, format) {
   return dayjs(date).format(format || "MMM DD YYYY");
 }
 
-const njk = nunjucks.configure(baseDir, {
+const njk = nunjucks.configure(tmplDir, {
   autoescape: true,
   watch: true,
 });
@@ -39,19 +36,25 @@ njk.addFilter("date", formatDate);
 njk.addFilter("take", _.take);
 njk.addFilter("vite", function viteInject(script) {
   if (IS_DEV) {
-    return `<script async type="module" src="${process.env.STATIC_URL}/${script}"></script>`;
+    return `<script async type="module" src="${
+      process.env.STATIC_URL || ""
+    }/${script}"></script>`;
   }
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const MANIFEST = require(process.env.MANIFEST || `${baseDir}/manifest.json`);
+  const MANIFEST = JSON.parse(
+    fs.readFileSync(process.env.MANIFEST || `./dist/.vite/manifest.json`)
+  );
   const mf = MANIFEST[script];
   if (!mf) return "";
   return `${_.map(
     mf.css,
     (css) =>
-      `<link rel="stylesheet" crossorigin="anonymous" href="${process.env.STATIC_URL}/${css}"/>`
+      `<link rel="stylesheet" crossorigin="anonymous" href="${
+        process.env.STATIC_URL || ""
+      }/${css}"/>`
   ).join(
     ""
-  )}<script async type="module" crossorigin="anonymous" src="${process.env.STATIC_URL}/${mf.file}"></script>`;
+  )}<script async type="module" crossorigin="anonymous" src="${process.env.STATIC_URL || ""}/${mf.file}"></script>`;
 });
 
 Object.keys(process.env).forEach((k) => {
@@ -89,12 +92,12 @@ function build(argv) {
   let filename = "";
   const templates = glob.sync("**/[^_]*.{html,xml,txt,md}", {
     dot: false,
-    ignore: ["public/*", ".toor/*", "node_modules/*"],
-    cwd: baseDir,
+    ignore: ["public/*", ".toor/*", "node_modules/*", "_*", "_*/**/*"],
+    cwd: tmplDir,
   });
   templates.forEach((tmpl) => {
     const html = tmpl.endsWith(".md")
-      ? renderMD(`${baseDir}/` + tmpl.replace(".html", ".md"))
+      ? renderMD(`${tmplDir}/` + tmpl.replace(".html", ".md"))
       : njk.render(tmpl, { data });
     filename = argv.outDir + "/" + tmpl.replace(".md", ".html");
     writeFileSyncRecursive(filename, html, { encoding: "utf-8" });
@@ -111,14 +114,14 @@ function useToorMiddleware(req, res, next) {
     safepath += "index";
   }
 
-  if (fs.statSync(`${baseDir}/${safepath}`, { throwIfNoEntry: false })) {
+  if (fs.statSync(`${tmplDir}/${safepath}`, { throwIfNoEntry: false })) {
     return res.send(njk.render(safepath, { data }));
   }
-  if (fs.statSync(`${baseDir}/${safepath}.html`, { throwIfNoEntry: false })) {
+  if (fs.statSync(`${tmplDir}/${safepath}.html`, { throwIfNoEntry: false })) {
     return res.send(njk.render(safepath + ".html", { data }));
   }
-  if (fs.statSync(`${baseDir}/${safepath}.md`, { throwIfNoEntry: false })) {
-    const html = renderMD(`${baseDir}/${safepath}.md`);
+  if (fs.statSync(`${tmplDir}/${safepath}.md`, { throwIfNoEntry: false })) {
+    const html = renderMD(`${tmplDir}/${safepath}.md`);
     return res.send(html);
   }
   return next();
