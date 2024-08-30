@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 
-import dayjs from "dayjs";
-import express from "express";
-import fs from "fs";
-import * as glob from "glob";
-import matter from "gray-matter";
-import http from "http";
-import _ from "lodash";
-import { marked } from "marked";
-import morgan from "morgan";
-import nunjucks from "nunjucks";
-import { resolve } from "path";
+const dayjs = require("dayjs");
+const express = require("express");
+const fs = require("fs");
+const glob = require("glob");
+const matter = require("gray-matter");
+const http = require("http");
+const _ = require("lodash");
+const { marked } = require("marked");
+const morgan = require("morgan");
+const nunjucks = require("nunjucks");
+const { resolve } = require("path");
 
 const IS_DEV = process.env.NODE_ENV === "development";
-const cwd = resolve(process.env.TOOR_BASE || ".");
+const cwd = resolve(process.env.TOOR_BASE || "templates/");
 
 let data = {};
 if (
@@ -88,7 +88,7 @@ function build(argv) {
     let filename = "";
     const templates = glob.sync("**/[^_]*.{html,xml,txt,md}", {
         dot: false,
-        ignore: ["public/*", ".toor/*"],
+        ignore: ["public/*", ".toor/*", "node_modules/*"],
         cwd,
     });
     templates.forEach((tmpl) => {
@@ -102,7 +102,7 @@ function build(argv) {
     process.exit();
 }
 
-export function useToorMiddleware(req, res, next) {
+function useToorMiddleware(req, res, next) {
     const base = req.path.substring(1) || "index.html";
     let safepath = base;
     if (/.*\/$/i.test(base)) {
@@ -123,9 +123,14 @@ export function useToorMiddleware(req, res, next) {
     return next();
 }
 
+module.exports.useToorMiddleware= useToorMiddleware;
 
-import("yargs").then(({ default: yargs }) => {
-    yargs.scriptName("toor.js")
+function main() {
+
+    const yargs = require('yargs/yargs')
+    const { hideBin } = require('yargs/helpers')
+
+    yargs(hideBin(process.argv))
         .usage("$0 <cmd> [args]")
         .command(
             "build [outdir]",
@@ -156,7 +161,7 @@ import("yargs").then(({ default: yargs }) => {
                 app.engine("html", njk.render);
                 app.set("view engine", "html");
 
-                app.use(express.static(cwd + "/public"));
+                app.use(express.static("public"));
                 app.use(morgan("short"));
 
                 app.use(useToorMiddleware);
@@ -170,4 +175,6 @@ import("yargs").then(({ default: yargs }) => {
             }
         )
         .help().argv;
-})
+}
+
+main();
